@@ -1,0 +1,139 @@
+services:
+  database:
+    image: postgres:15
+    container_name: audio_messages_backend_database
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+  backend:
+    image: lashnag/audio_messages_backend_application:1.0.0
+    container_name: audio_messages_backend_application
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      database:
+        condition: service_healthy
+      sender:
+        condition: service_healthy
+      text-to-voice:
+        condition: service_healthy
+#      logstash:
+#        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "${BACKEND_BASIC_AUTH_USER}:${BACKEND_BASIC_AUTH_PASSWORD}", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+  sender:
+    image: lashnag/sender_api:2.1.5
+    container_name: sender_api
+    restart: unless-stopped
+    env_file:
+      - .env
+#    depends_on:
+#      logstash:
+#        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4322/healthcheck" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./mounted/sender_api:/sender_api/mounted
+  text-to-voice:
+    image: lashnag/text-to-voice:1.0.0
+    container_name: text-to-voice
+    restart: unless-stopped
+    env_file:
+      - .env
+#    depends_on:
+#      logstash:
+#        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4313/healthcheck" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+#  elasticsearch:
+#    image: elasticsearch:7.17.0
+#    container_name: elasticsearch
+#    restart: unless-stopped
+#    environment:
+#      - discovery.type=single-node
+#      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+#      - xpack.security.enabled=true
+#      - ELASTIC_USERNAME=${ELASTIC_USERNAME}
+#      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+#    volumes:
+#      - elastic_search_data:/usr/share/elasticsearch/data
+#    env_file:
+#      - .env
+#    healthcheck:
+#      test: [ "CMD", "curl", "-u", "${ELASTIC_USERNAME}:${ELASTIC_PASSWORD}", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=50s" ]
+#      interval: 5s
+#      timeout: 10s
+#      retries: 15
+#  logstash:
+#    image: logstash:7.17.0
+#    container_name: logstash
+#    restart: unless-stopped
+#    environment:
+#      - XPACK_SECURITY_ENABLED=false
+#      - XPACK_MONITORING_ENABLED=false
+#    depends_on:
+#      elasticsearch:
+#        condition: service_healthy
+#    volumes:
+#      - ./mounted/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+#    env_file:
+#      - .env
+#    healthcheck:
+#      test: [ "CMD", "curl", "--silent", "--fail", "http://localhost:9600/_node/stats" ]
+#      interval: 5s
+#      timeout: 10s
+#      retries: 15
+#  kibana:
+#    image: kibana:7.17.0
+#    container_name: kibana
+#    restart: unless-stopped
+#    ports:
+#      - "${KIBANA_PORT}:5601"
+#    depends_on:
+#      elasticsearch:
+#        condition: service_healthy
+#    environment:
+#      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+#      - ELASTICSEARCH_USERNAME=${ELASTIC_USERNAME}
+#      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+#    env_file:
+#      - .env
+#  grafana:
+#    image: grafana/grafana:11.5.1
+#    container_name: grafana
+#    restart: unless-stopped
+#    ports:
+#      - "${GRAFANA_PORT}:3000"
+#    depends_on:
+#      - elasticsearch
+#    environment:
+#      - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}
+#      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+#      - GF_SERVER_ROOT_URL=${DOMAIN}:${GRAFANA_PORT}
+#    volumes:
+#      - grafana:/var/lib/grafana
+volumes:
+  postgres_data:
+#  elastic_search_data:
+#  grafana:
