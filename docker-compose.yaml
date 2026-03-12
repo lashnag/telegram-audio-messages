@@ -15,7 +15,7 @@ services:
       timeout: 10s
       retries: 5
   backend:
-    image: lashnag/audio_messages_backend_application:1.0.1
+    image: lashnag/audio_messages_backend_application:1.0.2
     container_name: audio_messages_backend_application
     restart: unless-stopped
     ports:
