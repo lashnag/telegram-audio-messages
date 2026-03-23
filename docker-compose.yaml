@@ -53,7 +53,7 @@ services:
     volumes:
       - ./mounted/sender_api:/sender_api/mounted
   text-to-voice:
-    image: lashnag/text-to-voice:1.0.6
+    image: lashnag/text-to-voice-qwen:1.0.0
     container_name: text-to-voice
     restart: unless-stopped
     env_file:
